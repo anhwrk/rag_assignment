@@ -8,9 +8,7 @@ import json
 @Service()
 class RecommendationService:
     def __init__(self):
-        self.load_knowledge_base()
-        # Bug: Incorrect similarity threshold
-        self.similarity_threshold = 0.9
+        pass
     
     def load_knowledge_base(self):
         try:
@@ -54,10 +52,6 @@ class RecommendationService:
 
     def get_recommendation(self, query: RecommendationDTO) -> RecommendationResponse:
         try:
-            # Bug: No input validation
-            if not query.strip():
-                raise ValueError("Empty query")
-
             # Identify fit issues
             identified_issues = self.identify_fit_issues(query)
             

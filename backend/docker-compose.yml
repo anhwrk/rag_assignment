@@ -1,6 +1,6 @@
 services:
   app:
-    container_name: internal-tools
+    container_name: test-api
     build:
       context: .
       dockerfile: Dockerfile
