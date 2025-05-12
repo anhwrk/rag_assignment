@@ -1,0 +1,16 @@
+# Bra Fitting Default Values
+DEFAULT_RECOMMENDATION = "34B"
+DEFAULT_CONFIDENCE = 0.3
+DEFAULT_REASONING = "Unable to find exact match. Please measure again."
+DEFAULT_FIT_TIPS = "Please consult our measurement guide."
+DEFAULT_BEST_MATCH_SCORE_THRESHOLD = 0.5
+
+# Vector Search Constants
+VECTOR_SEARCH_INDEX_NAME = "test_vector_index"
+VECTOR_SEARCH_PATH = "embedding"
+VECTOR_SEARCH_LIMIT = 5
+VECTOR_SEARCH_THRESHOLD = 0.3
+VECTOR_SEARCH_DIMENSIONS = 1536
+VECTOR_SEARCH_SIMILARITY = "cosine"
+VECTOR_SEARCH_TYPE = "knnVector"
+

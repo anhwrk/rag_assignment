@@ -1,6 +1,7 @@
 from loguru import logger
 import pymongo
 from core.config import config
+from common.constants import VECTOR_SEARCH_INDEX_NAME, VECTOR_SEARCH_DIMENSIONS, VECTOR_SEARCH_SIMILARITY, VECTOR_SEARCH_TYPE
 
 class MongoDBIndex:
     def __init__(self) -> None:
@@ -9,7 +10,7 @@ class MongoDBIndex:
         self.collection = self.db[config.DB_COLLECTION]
     
     @staticmethod
-    def create_vector_search_index_if_not_exists(self, index_name: str = "vector_index"):
+    def create_vector_search_index_if_not_exists(self, index_name: str = VECTOR_SEARCH_INDEX_NAME):
         existing_indexes = list(self.collection.list_search_indexes())
         if any(idx.get('name') == index_name for idx in existing_indexes):
             logger.info(f"Index {index_name} already exists")
@@ -24,9 +25,9 @@ class MongoDBIndex:
                         "dynamic": True,
                         "fields": {
                             "embedding": {
-                                "dimensions": 1536,
-                                "similarity": "cosine",
-                                "type": "knnVector"
+                                "dimensions": VECTOR_SEARCH_DIMENSIONS,
+                                "similarity": VECTOR_SEARCH_SIMILARITY,
+                                "type": VECTOR_SEARCH_TYPE
                             }
                         }
                     }

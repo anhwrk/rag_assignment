@@ -1,90 +1,97 @@
+from common.constants import (
+    DEFAULT_RECOMMENDATION, DEFAULT_CONFIDENCE, DEFAULT_REASONING, DEFAULT_FIT_TIPS, 
+    VECTOR_SEARCH_PATH, VECTOR_SEARCH_LIMIT, VECTOR_SEARCH_THRESHOLD, VECTOR_SEARCH_INDEX_NAME,
+    DEFAULT_BEST_MATCH_SCORE_THRESHOLD
+)
 from core.exceptions.base import AlreadyExistedException, NotFoundException
 from .models import RecommendationDTO, RecommendationResponse
 from loguru import logger
 from core.decorators import Service
 from typing import Dict, Optional, List
-import json
+from common.openai.embedding import Embedding
+from common.mongodb.index import MongoDBIndex
 
 @Service()
 class RecommendationService:
     def __init__(self):
-        pass
-    
-    def load_knowledge_base(self):
-        try:
-            with open('app/data/bra_fitting_data.json', 'r') as f:
-                self.knowledge_base = json.load(f)
-        except FileNotFoundError:
-            # Bug: Poor error handling
-            self.knowledge_base = []
+        self.embedding_client = Embedding()
+        self.mongodb_index = MongoDBIndex()
+        self.index_name = VECTOR_SEARCH_INDEX_NAME
 
-    def calculate_fit_similarity(self, query: str, context: Dict) -> float:
-        # Bug: Oversimplified similarity calculation
-        query_lower = query.lower()
-        description_lower = context['description'].lower()
-        
-        # Extract measurements from query (Bug: Fragile measurement extraction)
-        query_measurements = [int(s) for s in query_lower.split() if s.isdigit()]
-        context_measurements = [int(s) for s in description_lower.split() if s.isdigit()]
-        
-        # Bug: Poor similarity logic
-        if not query_measurements or not context_measurements:
-            return 0.0
-            
-        return 1.0 if query_measurements == context_measurements else 0.0
-
-    def identify_fit_issues(self, query: str) -> List[str]:
-        # Bug: Missing comprehensive issue detection
-        issues = []
-        common_problems = {
-            "riding up": "band_riding_up",
-            "falling": "straps_falling",
-            "digging": "straps_digging",
-            "wrinkle": "cup_wrinkling",
-            "overflow": "quadraboob"
-        }
-        
-        for keyword, issue in common_problems.items():
-            if keyword in query.lower():
-                issues.append(issue)
-        
-        return issues
-
-    def get_recommendation(self, query: RecommendationDTO) -> RecommendationResponse:
-        try:
-            # Identify fit issues
-            identified_issues = self.identify_fit_issues(query)
-            
-            # Find relevant contexts
-            relevant_fits = []
-            for context in self.knowledge_base:
-                similarity = self.calculate_fit_similarity(query, context)
-                if similarity > self.similarity_threshold:
-                    relevant_fits.append({
-                        'context': context,
-                        'similarity': similarity
-                    })
-
-            # Bug: No handling of no matches
-            if not relevant_fits:
-                return {
-                    "recommendation": "34B",  # Bug: Hardcoded default
-                    "confidence": 0.3,
-                    "reasoning": "Unable to find exact match. Please measure again.",
-                    "fit_tips": "Please consult our measurement guide."
+    def _create_search_pipeline(self, query_embedding: List[float]) -> List[Dict]:
+        return [
+            {
+                "$vectorSearch": {
+                    "index": self.index_name,
+                    "queryVector": query_embedding,
+                    "path": VECTOR_SEARCH_PATH,
+                    "limit": VECTOR_SEARCH_LIMIT,
+                    "minScore": VECTOR_SEARCH_THRESHOLD,
+                    "numCandidates": 100,
                 }
-
-            # Bug: Oversimplified recommendation selection
-            best_match = max(relevant_fits, key=lambda x: x['similarity'])
-            
-            return {
-                "recommendation": best_match['context']['recommendation'],
-                "confidence": best_match['similarity'],
-                "reasoning": best_match['context']['reasoning'],
-                "fit_tips": best_match['context']['fit_tips'],
-                "identified_issues": identified_issues
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "recommendation": 1,
+                    "reasoning": 1,
+                    "fit_tips": 1,
+                    "common_issues": 1,
+                    "score": {"$meta": "vectorSearchScore"}
+                }
+            },
+            {
+                "$sort": {
+                    "score": -1
+                }
             }
+        ]
+
+    def _execute_vector_search(self, pipeline: List[Dict]) -> List[Dict]:
+        results = list(self.mongodb_index.collection.aggregate(pipeline))
+        logger.info(f"Found {len(results)} matches")
+        return results
+
+    def _create_response(self, match: Dict) -> RecommendationResponse:
+        return RecommendationResponse(
+            recommendation=match["recommendation"],
+            confidence=match["score"],
+            reasoning=match["reasoning"],
+            fit_tips=match["fit_tips"],
+            identified_issues=match["common_issues"]
+        )
+
+    def _get_default_response(self) -> RecommendationResponse:
+        return RecommendationResponse(
+            recommendation=DEFAULT_RECOMMENDATION, 
+            confidence=DEFAULT_CONFIDENCE,
+            reasoning=DEFAULT_REASONING,
+            fit_tips=DEFAULT_FIT_TIPS,
+        )
+
+    async def get_recommendation(self, query: RecommendationDTO) -> RecommendationResponse:
+        try:
+            # Generate embedding for query
+            query_embedding = self.embedding_client.embedding_text(query.text)
+
+            # Search for similar fittings
+            pipeline = self._create_search_pipeline(query_embedding)
+            results = self._execute_vector_search(pipeline)
+
+            # Return default response if no matches found
+            if not results:
+                logger.warning("No matches found, returning default recommendation")
+                return self._get_default_response()
+
+            # Check if best match has sufficient confidence
+            best_match = results[0]
+            if best_match["score"] < DEFAULT_BEST_MATCH_SCORE_THRESHOLD: 
+                logger.warning("Match found but confidence too low, returning default recommendation")
+                return self._get_default_response()
+
+            # Return best match
+            return self._create_response(best_match)
 
         except Exception as e:
-            # Bug: Generic error handling
-            return {"error": str(e)}
+            logger.error(f"Error getting recommendation: {str(e)}")
+            raise

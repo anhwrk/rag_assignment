@@ -1,10 +1,9 @@
-from core.exceptions.base import AlreadyExistedException, NotFoundException
-from .models.dto import BraFitting  
+from .models.dto import BraFitting 
 from loguru import logger
 from core.decorators import Service
 from typing import Dict, Optional, List
 from prisma import Prisma
-from backend.common.openai.embedding import Embedding
+from common.openai.embedding import Embedding
 
 @Service()
 class BraFittingService:
@@ -13,7 +12,7 @@ class BraFittingService:
         self.embedding_client = Embedding()
     
     async def create_bra_fitting(self, bra_fitting: BraFitting) -> BraFitting:
-        await self.db.connect()  
+        await self.db.connect() 
         try:
             combined_text = (
                 f"Description: {bra_fitting.description}\n"
@@ -35,7 +34,6 @@ class BraFittingService:
                     "embedding": embedding_vector
                 }
             )
-            logger.info(f"Created bra fitting with embedding: {created_bra_fitting}")
             return created_bra_fitting
         except Exception as e:
             logger.error(f"Error creating bra fitting: {str(e)}")

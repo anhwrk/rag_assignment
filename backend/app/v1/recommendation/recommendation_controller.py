@@ -4,7 +4,7 @@ from core.decorators import Controller
 
 from .recommendation_service import RecommendationService
 
-@Controller(tags=["recommendation"], prefix="/bra-fitting")
+@Controller(tags=["recommendation"], prefix="/recommendation")
 class RecommendationController:
     def __init__(self):
         self.service = RecommendationService()
