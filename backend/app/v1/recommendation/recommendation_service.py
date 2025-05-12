@@ -1,12 +1,17 @@
+from core.exceptions.base import AlreadyExistedException, NotFoundException
+from .models import RecommendationDTO, RecommendationResponse
+from loguru import logger
+from core.decorators import Service
+from typing import Dict, Optional, List
 import json
-from typing import Dict, List
 
-class BraFittingRAG:
+@Service()
+class RecommendationService:
     def __init__(self):
         self.load_knowledge_base()
         # Bug: Incorrect similarity threshold
         self.similarity_threshold = 0.9
-
+    
     def load_knowledge_base(self):
         try:
             with open('app/data/bra_fitting_data.json', 'r') as f:
@@ -47,7 +52,7 @@ class BraFittingRAG:
         
         return issues
 
-    def get_recommendation(self, query: str) -> Dict:
+    def get_recommendation(self, query: RecommendationDTO) -> RecommendationResponse:
         try:
             # Bug: No input validation
             if not query.strip():

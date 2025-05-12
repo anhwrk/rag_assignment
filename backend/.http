@@ -1,0 +1,45 @@
+@baseUrl = http://localhost:8000/api/v1
+@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoicWxheS1qb2JzLWJmZiIsInBlcm1pc3Npb25zIjpbIkNSRUFURSJdfQ.wUYNK66AXZXXXlfP8xoWElykn7Kyub3baoknD9Nc4l8
+
+### Health Check
+GET {{baseUrl}}/monitoring/health
+Content-Type: application/json
+
+### Get Users
+GET {{baseUrl}}/users?page=1&per_page=5&sort_by=id:asc
+Authorization: {{token}} 
+Content-Type: application/json
+
+### Get User by ID
+GET {{baseUrl}}/users/1
+Authorization: {{token}} 
+Content-Type: application/json
+
+### Create User
+POST {{baseUrl}}/users
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+    "email": "test3@gmail.com",
+    "permissions": ["CREATE", "DELETE"]
+}
+
+### Update User
+PUT {{baseUrl}}/users/2
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+    "permissions": ["CREATE"]
+}
+
+### Delete User
+DELETE {{baseUrl}}/users/3
+Authorization: {{token}}
+Content-Type: application/json
+
+
+### Get API Key 
+POST {{baseUrl}}/auth/permanent-token
+Content-Type: application/json
