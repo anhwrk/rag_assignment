@@ -1,3 +1,4 @@
+from typing import List
 from common.mongodb.index import MongoDBIndex
 from loguru import logger
 from langchain_openai import OpenAIEmbeddings
@@ -12,7 +13,7 @@ class Embedding:
         )
         self.index_name = "test_vector_index"
 
-    def embedding_text(self, embedding_text: str):
+    def embedding_text(self, embedding_text: str) -> List[float]:
         logger.info(f"Start embedding text... {embedding_text}")
         MongoDBIndex.create_vector_search_index_if_not_exists(self.mongodbIndex, index_name=self.index_name)
         embedding = self.embedding_model.embed_query(embedding_text)
